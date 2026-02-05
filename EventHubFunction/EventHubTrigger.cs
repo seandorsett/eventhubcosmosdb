@@ -1,6 +1,7 @@
 using Microsoft.Azure.Functions.Worker;
 using Microsoft.Extensions.Logging;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 
 namespace EventHubFunction;
 
@@ -39,9 +40,6 @@ public class EventHubTrigger
                     continue;
                 }
 
-                // Set the id field for Cosmos DB (lowercase 'id' is required by Cosmos DB)
-                sensorData.id = sensorData.Id;
-
                 _logger.LogInformation($"Saving sensor data to Cosmos DB - ID: {sensorData.id}, Sensor: {sensorData.SensorId}");
                 
                 sensorDataList.Add(sensorData);
@@ -62,13 +60,14 @@ public class EventHubTrigger
 
 public class SensorData
 {
-    public string? id { get; set; }  // Required by Cosmos DB (lowercase)
-    public string? Id { get; set; }   // From the message
+    [JsonPropertyName("Id")]
+    public string? id { get; set; }  // Maps to "Id" from JSON, stores as "id" for Cosmos DB
     public int MessageNumber { get; set; }
     public DateTime Timestamp { get; set; }
     public string? SensorId { get; set; }
     public double Temperature { get; set; }
     public double Humidity { get; set; }
 }
+
 
 

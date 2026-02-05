@@ -59,8 +59,7 @@ class Program
     {
         try
         {
-            // Create a batch of events
-            using EventDataBatch eventBatch = await producerClient.CreateBatchAsync();
+            var successCount = 0;
 
             for (int i = 1; i <= messageCount; i++)
             {
@@ -77,31 +76,19 @@ class Program
                 var jsonMessage = JsonSerializer.Serialize(message);
                 var eventData = new EventData(jsonMessage);
 
-                // Try to add the event to the batch
+                // Create a batch for each message (simpler approach for this POC)
+                using EventDataBatch eventBatch = await producerClient.CreateBatchAsync();
+                
                 if (!eventBatch.TryAdd(eventData))
                 {
-                    // If it's too large for the batch, send the current batch and create a new one
-                    if (eventBatch.Count > 0)
-                    {
-                        await producerClient.SendAsync(eventBatch);
-                        Console.WriteLine($"Sent batch of {eventBatch.Count} messages");
-                    }
-
-                    // Create a new batch and add the current message
-                    using var newBatch = await producerClient.CreateBatchAsync();
-                    if (!newBatch.TryAdd(eventData))
-                    {
-                        throw new Exception($"Message {i} is too large to fit in a batch");
-                    }
+                    throw new Exception($"Message {i} is too large to fit in a batch");
                 }
+
+                await producerClient.SendAsync(eventBatch);
+                successCount++;
             }
 
-            // Send the final batch
-            if (eventBatch.Count > 0)
-            {
-                await producerClient.SendAsync(eventBatch);
-                Console.WriteLine($"✓ Successfully sent {messageCount} messages to Event Hub\n");
-            }
+            Console.WriteLine($"✓ Successfully sent {successCount} messages to Event Hub\n");
         }
         catch (Exception ex)
         {
