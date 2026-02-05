@@ -17,49 +17,58 @@ public class EventHubTrigger
     [CosmosDBOutput("%CosmosDB:DatabaseName%", 
                     "%CosmosDB:ContainerName%",
                     Connection = "CosmosDB:ConnectionString",
-                    CreateIfNotExists = true,
-                    PartitionKey = "/id")]
-    public SensorData Run(
+                    CreateIfNotExists = true)]
+    public SensorData[] Run(
         [EventHubTrigger("%EventHub:EventHubName%", Connection = "EventHub:ConnectionString")] string[] messages)
     {
         _logger.LogInformation($"Processing batch of {messages.Length} messages from Event Hub");
 
-        // Process the first message in the batch (for simplicity)
-        // In production, you'd want to process all messages
-        var message = messages[0];
-        
-        _logger.LogInformation($"Message received: {message}");
+        var sensorDataList = new List<SensorData>();
 
-        try
+        foreach (var message in messages)
         {
-            var sensorData = JsonSerializer.Deserialize<SensorData>(message);
-            
-            if (sensorData == null)
+            try
             {
-                _logger.LogWarning("Failed to deserialize message");
-                return new SensorData();
-            }
+                _logger.LogInformation($"Message received: {message}");
 
-            _logger.LogInformation($"Saving sensor data to Cosmos DB - ID: {sensorData.Id}, Sensor: {sensorData.SensorId}");
-            
-            // Return the object to be saved to Cosmos DB via output binding
-            return sensorData;
+                var sensorData = JsonSerializer.Deserialize<SensorData>(message);
+                
+                if (sensorData == null)
+                {
+                    _logger.LogWarning("Failed to deserialize message");
+                    continue;
+                }
+
+                // Set the id field for Cosmos DB (lowercase 'id' is required by Cosmos DB)
+                sensorData.id = sensorData.Id;
+
+                _logger.LogInformation($"Saving sensor data to Cosmos DB - ID: {sensorData.id}, Sensor: {sensorData.SensorId}");
+                
+                sensorDataList.Add(sensorData);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError($"Error processing message: {ex.Message}");
+                // Continue processing other messages even if one fails
+            }
         }
-        catch (Exception ex)
-        {
-            _logger.LogError($"Error processing message: {ex.Message}");
-            throw;
-        }
+
+        _logger.LogInformation($"Successfully processed {sensorDataList.Count} messages");
+        
+        // Return array of documents to be saved to Cosmos DB
+        return sensorDataList.ToArray();
     }
 }
 
 public class SensorData
 {
-    public string? id { get; set; }
-    public string? Id { get; set; }
+    public string? id { get; set; }  // Required by Cosmos DB (lowercase)
+    public string? Id { get; set; }   // From the message
     public int MessageNumber { get; set; }
     public DateTime Timestamp { get; set; }
     public string? SensorId { get; set; }
     public double Temperature { get; set; }
     public double Humidity { get; set; }
 }
+
+
