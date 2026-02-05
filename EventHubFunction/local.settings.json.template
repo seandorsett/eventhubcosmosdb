@@ -1,0 +1,12 @@
+{
+  "IsEncrypted": false,
+  "Values": {
+    "AzureWebJobsStorage": "UseDevelopmentStorage=true",
+    "FUNCTIONS_WORKER_RUNTIME": "dotnet-isolated",
+    "EventHub:ConnectionString": "YOUR_EVENT_HUB_CONNECTION_STRING_HERE",
+    "EventHub:EventHubName": "YOUR_EVENT_HUB_NAME_HERE",
+    "CosmosDB:ConnectionString": "YOUR_COSMOS_DB_CONNECTION_STRING_HERE",
+    "CosmosDB:DatabaseName": "SensorDatabase",
+    "CosmosDB:ContainerName": "SensorData"
+  }
+}
